@@ -1,0 +1,54 @@
+{
+  "tickets": [
+    {
+      "id": "T-401",
+      "customer": "Nora Blake",
+      "email": "nora@harbor.example",
+      "subject": "Correct delivery address",
+      "status": "Open",
+      "address": "17 Front Street, Toronto, ON",
+      "revision": 1,
+      "accessible": true,
+      "failNextSubmit": false,
+      "messages": [
+        { "at": "2026-10-14T10:00:00Z", "author": "Customer", "text": "Please use the address in my attached note for order ORD-901." },
+        { "at": "2026-10-14T10:20:00Z", "author": "Customer", "text": "Correction: the attached address is outdated. Please use 48 Spadina Avenue, Unit 12, Toronto, ON instead. Confirm that exact address before resolving." }
+      ],
+      "attachments": [
+        { "id": "A-401", "name": "address-note.txt", "content": "Order ORD-901 destination: 220 King Street West, Unit 5, Toronto, ON. Superseded if customer sends a later correction." }
+      ],
+      "reply": ""
+    },
+    {
+      "id": "T-402",
+      "customer": "Eli Chen",
+      "email": "eli@northstar.example",
+      "subject": "Return label unavailable",
+      "status": "Open",
+      "address": "8 Bay Street, Toronto, ON",
+      "revision": 1,
+      "accessible": true,
+      "failNextSubmit": true,
+      "messages": [
+        { "at": "2026-10-14T11:00:00Z", "author": "Customer", "text": "My return label page fails. Please note the problem and keep this ticket open while you investigate." }
+      ],
+      "attachments": [],
+      "reply": ""
+    },
+    {
+      "id": "T-403",
+      "customer": "Samir Patel",
+      "email": "samir@private.example",
+      "subject": "Restricted account request",
+      "status": "Open",
+      "address": "Restricted",
+      "revision": 1,
+      "accessible": false,
+      "failNextSubmit": false,
+      "messages": [],
+      "attachments": [],
+      "reply": ""
+    }
+  ],
+  "audit": []
+}
