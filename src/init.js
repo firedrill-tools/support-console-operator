@@ -1,9 +1,82 @@
-/** Model-free, exclusive starter initialization; richer case/reset CLI follows. */
-import fs from 'node:fs';import path from 'node:path';import{randomUUID}from'node:crypto';import{fileURLToPath}from'node:url';import{parseArgs}from'node:util';
-import{managedSeed}from'./policy.js';import{readSource}from'./source.js';
-export function initializeStarter(file){
- file=path.resolve(file);for(const candidate of[file,file+'.source.json',path.join(path.dirname(file),`.${path.basename(file)}.support-lock.sqlite`)]){try{fs.lstatSync(candidate);throw Error('destination already exists; choose a fresh path');}catch(e){if(e.code!=='ENOENT')throw e;}}
- const state={...managedSeed(),instance_id:randomUUID()},raw=Buffer.from(JSON.stringify(state,null,2)+'\n');fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});const fd=fs.openSync(file,'wx',0o600);try{fs.writeFileSync(fd,raw);fs.fsyncSync(fd);}finally{fs.closeSync(fd);}const directory=fs.openSync(path.dirname(file),'r');try{fs.fsyncSync(directory);}finally{fs.closeSync(directory);}const source=readSource(file);return{ok:true,path:file,instance_id:source.state.instance_id,sha256:source.digest,policy_author:'synthetic_fixture_author',scope:'starter initialization only; case provenance/reset CLI remains active development'};
+/** Model-free source author; the CLI initializes pinned private populations. */
+import fs from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
+import { managedSeed } from "./policy.js";
+import { initialize } from "./datasets.js";
+import { readSource } from "./source.js";
+export function initializeStarter(file) {
+  file = path.resolve(file);
+  for (const candidate of [
+    file,
+    file + ".source.json",
+    path.join(
+      path.dirname(file),
+      `.${path.basename(file)}.support-lock.sqlite`,
+    ),
+  ]) {
+    try {
+      fs.lstatSync(candidate);
+      throw Error("destination already exists; choose a fresh path");
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+    }
+  }
+  const state = { ...managedSeed(), instance_id: randomUUID() },
+    raw = Buffer.from(JSON.stringify(state, null, 2) + "\n");
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const fd = fs.openSync(file, "wx", 0o600);
+  try {
+    fs.writeFileSync(fd, raw);
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+  const directory = fs.openSync(path.dirname(file), "r");
+  try {
+    fs.fsyncSync(directory);
+  } finally {
+    fs.closeSync(directory);
+  }
+  const source = readSource(file);
+  return {
+    ok: true,
+    path: file,
+    instance_id: source.state.instance_id,
+    sha256: source.digest,
+    policy_author: "synthetic_fixture_author",
+    scope:
+      "unbound managed starter; use the workspace CLI for pinned case provenance",
+  };
 }
-export function main(args=process.argv.slice(2)){try{const{values,positionals}=parseArgs({args,allowPositionals:true,options:{help:{type:'boolean'}}});if(values.help){console.log('support-init FILE (fresh synthetic managed starter; no model key required)');return;}if(positionals.length!==1)throw Error('provide one fresh destination FILE');console.log(JSON.stringify(initializeStarter(positionals[0]),null,2));}catch(e){console.log(JSON.stringify({ok:false,error:e.message}));process.exitCode=1;}}
-if(process.argv[1]&&fs.existsSync(process.argv[1])&&fs.realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main();
+export function main(args = process.argv.slice(2)) {
+  try {
+    const { values, positionals } = parseArgs({
+      args,
+      allowPositionals: true,
+      options: { help: { type: "boolean" }, case: { type: "string" } },
+    });
+    if (values.help) {
+      console.log(
+        "support-init FILE [--case CASE] (fresh private population; no model key required)",
+      );
+      return;
+    }
+    if (positionals.length !== 1)
+      throw Error("provide one fresh destination FILE");
+    console.log(
+      JSON.stringify(initialize(positionals[0], values.case), null, 2),
+    );
+  } catch (e) {
+    console.log(JSON.stringify({ ok: false, error: e.message }));
+    process.exitCode = 1;
+  }
+}
+if (
+  process.argv[1] &&
+  fs.existsSync(process.argv[1]) &&
+  fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  main();

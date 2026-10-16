@@ -1,5 +1,6 @@
 node_modules/
 workspace.json
+workspace.json.source.json
 artifacts/
 .env
 .DS_Store

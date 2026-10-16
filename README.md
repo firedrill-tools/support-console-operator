@@ -1,46 +1,71 @@
 # Support console operator
 
-A Vercel AI SDK agent uses browser tools to work through a local support console. The synthetic ticket data includes an address attachment superseded by a later customer correction, a restricted ticket, and a retryable form failure. The application uses actual Chromium browser actions and captures every page observation.
+A browser-only support operator using actual Vercel AI SDK 7.0.141, OpenAI provider 4.0.94 and Playwright 1.64.1. A fictional support console includes attachments superseded by later customer corrections, keep-open requests, restricted tickets, duplicate customers and a transient form failure. Every browser observation has a private screenshot; model prose and observed saved effects are reported separately.
 
 ## Run locally
 
-Requires Node22.13+, npm and Playwright Chromium.
+Node 22.13+ and Playwright Chromium are required.
 
 ```sh
 npm ci
 npx playwright install chromium
-npm run init -- workspace.json
+npm run workspace -- list
+npm run init -- workspace.json --case corrected-address
 npm run portal
 ```
 
-In another terminal, set `OPENAI_API_KEY` and an enabled `OPENAI_MODEL`, then inspect without writes:
+Set `OPENAI_API_KEY` and an explicitly enabled `OPENAI_MODEL` in another terminal. Read-only is the default:
 
 ```sh
-npm run operate -- --task "Inspect ticket T-401, its attachment and the latest customer correction. Report the address to use."
+npm run operate -- --state workspace.json --task "Inspect T-401, its attachment and the latest customer correction. Report the current address without submitting."
 ```
 
-To allow a requested local update:
+An authorized synthetic update needs both the write flag and exact caller target:
 
 ```sh
-npm run operate -- --task "Resolve T-401 using Nora's latest corrected address. Confirm that address in the reply and verify the saved ticket." --allow-writes
+npm run operate -- --state workspace.json \
+  --task "Read T-401 and its attachment. Apply Nora's latest corrected address, confirm that address in the reply, and verify the saved ticket." \
+  --allow-writes --target-id T-401 --target-customer "Nora Blake" \
+  --target-email nora@harbor.example
 ```
 
-`SUPPORT_PORTAL_URL` changes the local loopback portal address, and `SUPPORT_WORKSPACE_FILE` sets the portal's state path. The agent uses AI SDK `generateText` with a bounded tool loop and `browser_inspect`, `browser_click`, `browser_fill` and `browser_select`. Clicking **Submit update** is blocked without `--allow-writes`. Each run writes screenshots and `trace.json` under `artifacts/<run-id>/` with browser observations and the final model response.
+`--portal-url` / `SUPPORT_PORTAL_URL` selects the exact HTTP loopback origin (default `http://127.0.0.1:8787`). `--state` / `SUPPORT_WORKSPACE_FILE` selects its local state file; the operator verifies it against the portal's original source. `--provider-base-url` / `OPENAI_BASE_URL` selects an HTTPS Responses endpoint or an owned HTTP loopback endpoint, with `/v1` only. No model is chosen or upgraded automatically. `--output` defaults to `artifacts`; `--timeout-ms` is 10–300000 (default 120000). Private run directories are 0700, original evidence and screenshots 0600. Receipts contain synthetic business content; store them privately.
 
-The portal's state is a local JSON file. T-401 can resolve only with the later corrected address and a reply containing that exact address. T-403 is inaccessible. T-402 rejects the first submit without changing the ticket; the operator can reload and retry. Every accepted update checks the ticket revision. The console has no real customer system, email delivery or authentication; run it only locally with synthetic data. Reset with `npm run init -- workspace.json`.
+The callable `runOperator(task, options)` supports those fields plus `apiKey` and an `AbortSignal`. Injected SDK clients/model objects are unsupported. Provider credentials remain outside browser tools, child browser environment, URLs and model observations.
 
-`npm test` exercises the AI SDK loop with a scripted model, actual Chromium navigation and screenshots, the attachment/correction flow, a restricted record, a read-only run, failed browser submission, retry and mobile viewport. These are offline application proofs, not a live OpenAI model result. Live provider and new Firedrill integration proofs remain pending. This private repository has no license pending portfolio publication decisions.
+## Source and save behavior
 
-Explore related applications in the [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog). Product and setup references: [Firedrill](https://firedrill.run/) and the [official developer documentation](https://docs.firedrill.run/). Use documentation matching the qualified release; this repository records its current integration limits above.
+Managed tickets have an explicitly authored synthetic policy bound to the exact customer, email, conversation and attachment bytes. It declares the latest customer address, keep-open instruction and relevant attachments. This is fictional source authorship, not language understanding or real customer authentication. Submit rules consume that policy for every ticket ID. The unchanged original fixture remains readable only; it is never silently granted guessed write policy.
 
-## Development audit active
+A save requires a genuine full current ticket read, relevant actual attachment observations, the exact caller ticket/customer/email, current source hash and instance, explicit write permission and current revision. Later corrections and keep-open instructions override older attachment text. Changed, unchanged and failed submissions have distinct source decisions and audit records. Revision exhaustion, altered identity/messages/attachment/policy, stale/replayed forms, wrong/closed scopes and missing attachment evidence reject without overwriting current business fields. Persistent SQLite locks serialize cooperating processes; flushed staged writes recheck original file bytes and inode. The files are not an OS security boundary against uncooperative writers.
 
-All5 original checks pass, but current source saves an obsolete hardcoded T-401 address after a newer correction/changed customer, ignores T-402 keep-open, accepts boolean revisions and overflows MAX revision. Actual pinned AI SDK/OpenAI HTTP also ignores original incomplete response/item status when reason metadata is absent, dispatches Submit update and saves; with a max-output reason it stops the save but returns a blank successful response. These controlled fault probes used actual SDK/provider transport and real Chromium, no paid provider or real customer. [PLAN.md](PLAN.md) defines current complete source/read/attachment/policy/target authority, owned native/browser/evidence/cleanup, rich populations/private CLI and fresh distribution. All fixes remain active; live semantics/billing/Firedrill/support connector/publication inputs stay parked.
+A transient failure consumes its form read and only clears the synthetic failure marker. Address/reply/status/revision stay unchanged; the failure page visibly says unsaved. The operator stops. An explicit separate retry must reopen and read current state. A genuine saved receipt replaces query-string success claims. Read-only or another target's form cannot authorize Submit. Restricted contents stay out of queue/search/details and ordinary API reads. Human browser actions remain a separate synthetic local actor.
 
-### Source/portal checkpoint
+The loopback private controller marker is not authentication. There is no real support backend, customer login, email, order fulfillment or external delivery. Use synthetic data only.
 
-The source layer now uses strict complete ticket/read/attachment/policy/scope/decision/update/failure/correction/audit contracts and current complete equality before a save. Source-bound authored customer policy replaces ticket-ID hardcoding: latest declared address and keep-open instruction win; genuine current relevant attachment reads are required. `init` explicitly authors the known unchanged fixture into fresh synthetic managed source with UUID (new directories0700/file0600, exclusive), without a model key. The unchanged original legacy fixture is readable only, with no guessed write policy; existing unbound/altered legacy source rejects without repair. Rich case/provenance/reset work follows. These synthetic author/controller markers are not real customer authentication.
+## Native execution and evidence
 
-Transient failure consumes the read, changes only its explicit failure marker and records an unsaved failure; a retry needs a fresh read. Actual updates and no-op decisions capture attempted fields, attachment proofs and full before/after, preserving unrelated records. Atomic flushed original-byte/inode checks plus persistent SQLite serialize cooperating processes; unsafe/coerced revisions/tampered/replayed reads/closed-wrong-target operations cannot overwrite. A synthetic human form remains a separate local actor. Queue/search/details and ordinary API requests do not disclose restricted contents; controller APIs require a local marker, not production authentication. Genuine saved receipts replace ?saved=1. Model observations omit hidden source hashes/tokens.
+The four model tools are `browser_inspect`, `browser_click`, `browser_fill` and `browser_select`, using exact visible controls only. Each run owns a fresh browser/context, private operation, Undici HTTP pools and actual AI SDK generation promise. Browser paths/methods and every redirect are qualified under that scope. Foreign/API network requests, arbitrary URLs, JavaScript, service workers, downloads, WebSockets and popups are blocked. Hidden source/policy/credential fields and private capture paths stay out of model observations. Truncated ticket/attachment observations cannot grant write authority.
 
-The old operator still opens an unscoped browser and lacks original native completion/usage/lifecycle guards. Source fixes do not qualify that native boundary: actual owned AI SDK/OpenAI/HTTP and mandatory scoped browser wiring are next, then rich populations/private CLI/fresh distribution. No paid provider or real customer/support action occurred.
+Before the real SDK can eagerly execute a tool, the owned public provider fetch checks the original Responses root and item completion, errors/refusals, call ID, exact known name and strict duplicate-free arguments. Parallel, mixed, replayed, unknown, blank, incomplete and over-budget output fails closed. Completed original final text must match the actual SDK answer. No provider retry; at most 18 prepared requests/SDK steps, 4096 output tokens each, 30 seconds per native HTTP phase and the shared operation deadline. Requests retain up to 2 MiB and decoded native responses 1 MiB; an oversized response retains only an explicitly incomplete bounded prefix.
+
+Receipts retain original request/response bytes and hashes, unknown native fields/IDs, original reported usage and SDK normalization separately. Missing, invalid and genuine zero counters differ; cost is unknown (`null`). These counters are not billing proof. Prepared/partial/failed evidence precedes key/resource checks. Earlier saved changes survive a later native, source, recording or cleanup failure in the report; unknown final source or evidence durability remains unknown. Cancellation/deadline and SIGINT/SIGTERM/SIGHUP drain actual pending work and close write authority before cleanup. Failed close is attempted once and reported honestly. Final model prose is not a saved-effect receipt or customer delivery acknowledgment.
+
+## Private populations and reset
+
+Twelve hash-bound cases span starter, busy, ambiguous and boundary profiles. The busy queue contains 60 tickets, 48 reads, 36 attachment reads, 36 prior updates, six corrections, 12 pending reads and 42 audit entries. These are coherent fictional imports built through the actual Store; prior model evidence, human authentication and external support delivery remain unknown. `npm run datasets:check` reproduces original population bytes. See [data/index.json](data/index.json).
+
+```sh
+npm run workspace -- inspect workspace.json
+npm run workspace -- reset workspace.json another-private-workspace.json
+```
+
+Initialization/reset require a fresh destination and create a fresh UUID plus private seed-authority sidecar. Reset preserves the old source, mutex and receipts. Missing/corrupt/foreign source authority, collisions and invalid original population bytes reject without repair. Source and sidecar are two exclusive files, not a multi-file atomic transaction; a partial creation stays visible and needs a fresh destination. A valid current edit is distinct from an original seed match. Imported pending reads cannot authorize a fresh instance. The model-free commands need no provider key.
+
+## Verification and remaining integration
+
+`npm test` uses the actual pinned SDK/OpenAI provider with synthetic keys and an owned loopback Responses endpoint, actual portal and Chromium, original native faults, process races, save/failed form scope, lifecycle/CLI signals and all twelve populations. No paid provider or real customer is used. Scripted native responses qualify the local boundary; live model judgment and billing are separate external gates.
+
+`npm run package:check` qualifies a fresh complete locked source and independent production-only install outside the checkout, actual installed CLI/browser/captures/mobile viewport, private CLI cases, missing-key evidence, all three signals, unchanged manifest and repeated portable source bytes. [PLAN.md](PLAN.md) and [COMPATIBILITY.md](COMPATIBILITY.md) record exact qualification.
+
+Live enabled model/key/budget and human semantic/billing review, a qualified new Firedrill interface with persisted scenarios/runs, actual support/email/authentication and publication/license decisions remain parked. This private repository has no publication license yet. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
