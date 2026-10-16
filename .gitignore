@@ -3,3 +3,6 @@ workspace.json
 artifacts/
 .env
 .DS_Store
+.*.support-lock.sqlite*
+workspaces/
+dist/

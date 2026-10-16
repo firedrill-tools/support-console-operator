@@ -1,46 +1,35 @@
-import fs from "node:fs";
-import path from "node:path";
-
-export class Store {
-  constructor(file) {
-    this.file = path.resolve(file);
-    if (!fs.existsSync(this.file)) throw new Error(`workspace file missing: ${this.file}; copy fixtures/starter.json first`);
-    this.read();
-  }
-  read() {
-    const data = JSON.parse(fs.readFileSync(this.file, "utf8"));
-    if (!Array.isArray(data.tickets) || !Array.isArray(data.audit)) throw new Error("invalid support workspace");
-    return data;
-  }
-  write(data) {
-    const temp = `${this.file}.${process.pid}.tmp`;
-    fs.writeFileSync(temp, `${JSON.stringify(data, null, 2)}\n`);
-    fs.renameSync(temp, this.file);
-  }
-  ticket(id) { return this.read().tickets.find((item) => item.id === id); }
-  submit(id, input) {
-    const data = this.read();
-    const ticket = data.tickets.find((item) => item.id === id);
-    if (!ticket) return { error: "ticket_not_found" };
-    if (!ticket.accessible) return { error: "access_denied" };
-    if (Number(input.revision) !== ticket.revision) return { error: "stale_revision" };
-    if (ticket.failNextSubmit) {
-      ticket.failNextSubmit = false;
-      data.audit.push({ ticketId: id, event: "transient_submission_failure" });
-      this.write(data);
-      return { error: "submit_failed_retryable" };
-    }
-    const address = String(input.address || "").trim();
-    const reply = String(input.reply || "").trim();
-    const status = String(input.status || "");
-    if (!address || address.length > 160 || reply.length < 15 || reply.length > 1000 || !["Open", "Resolved"].includes(status)) return { error: "invalid_form" };
-    if (ticket.id === "T-401" && status === "Resolved" && (!reply.includes(address) || address !== "48 Spadina Avenue, Unit 12, Toronto, ON")) return { error: "correction_not_acknowledged" };
-    ticket.address = address;
-    ticket.reply = reply;
-    ticket.status = status;
-    ticket.revision += 1;
-    data.audit.push({ ticketId: id, event: "submitted", address, status, revision: ticket.revision });
-    this.write(data);
-    return { ticket };
-  }
+import fs from 'node:fs';import path from 'node:path';import {randomUUID,randomBytes} from 'node:crypto';import {DatabaseSync} from 'node:sqlite';import {z} from 'zod';
+import {readSource,saveSource} from './source.js';
+import {identifier,digest,revision,utc,prose,targetSchema,attemptSchema,source,hash,canonical,same,managed,matches,instructionHash,readHash,attachmentReadHash,validateAttempt} from './schema.js';
+import {authorPolicy} from './policy.js';
+const inputSchema=attemptSchema.extend({read_id:z.string().uuid(),read_sha256:digest,revision}),error=message=>({error:message});
+const next=(prefix,rows)=>{let n=rows.length+1;while(rows.some(r=>r.id===`${prefix}-${n}`))n++;return`${prefix}-${n}`;};
+export class Store{
+ constructor(file){const s=readSource(file);this.file=fs.realpathSync(file);this.instance=s.state.instance_id??null;this.managed=managed(s.state);this.lock=path.join(path.dirname(this.file),`.${path.basename(this.file)}.support-lock.sqlite`);}
+ snapshot(){const s=readSource(this.file);if((s.state.instance_id??null)!==this.instance||managed(s.state)!==this.managed)throw Error('workspace instance/source kind changed');return s;}
+ read(){return this.snapshot().state;}
+ transaction(fn){if(fs.existsSync(this.lock)&&(!fs.lstatSync(this.lock).isFile()||fs.lstatSync(this.lock).isSymbolicLink()))throw Error('invalid workspace mutex');try{fs.closeSync(fs.openSync(this.lock,'wx',0o600));}catch(e){if(e.code!=='EEXIST')throw e;}const db=new DatabaseSync(this.lock);try{db.exec('PRAGMA busy_timeout=5000; BEGIN IMMEDIATE');const prior=this.snapshot(),{result,dirty}=fn(prior.state);if(dirty)saveSource(this.file,prior.state,prior);db.exec('COMMIT');return structuredClone(result);}catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}finally{db.close();}}
+ operation(state,credential,allowClosed=false){if(credential===null)return null;if(typeof credential!=='string'||!/^[a-f0-9]{64}$/.test(credential))throw Error('unknown_operation');const op=(state.operations??[]).find(o=>o.credential_sha256===hash(credential));if(!op)throw Error('unknown_operation');if(op.status!=='active'&&!allowClosed)throw Error('operation_closed');return op;}
+ scope(op){return{kind:op?'operator':'synthetic_human',operation_id:op?.id??null,task_sha256:op?.task_sha256??null,allow_writes:op?.allow_writes??true,target:op?.target??null};}
+ registerOperation(taskHash,allowWrites,target=null){digest.parse(taskHash);if(typeof allowWrites!=='boolean')throw Error('allowWrites must be a boolean');if(allowWrites)target=targetSchema.parse(target);else if(target!==null)throw Error('read-only operation cannot claim a write target');return this.transaction(state=>{if(allowWrites&&!managed(state))throw Error('managed_workspace_required');if(target&&!state.tickets.some(t=>t.accessible&&matches(t,target)))throw Error('exact_accessible_target_not_found');const credential=randomBytes(32).toString('hex'),operation={id:randomUUID(),credential_sha256:hash(credential),task_sha256:taskHash,allow_writes:allowWrites,target:structuredClone(target),status:'active'};(state.operations??=[]).push(operation);return{result:{credential,operation},dirty:true};});}
+ closeOperation(credential){return this.transaction(state=>{const op=this.operation(state,credential);if(!op)throw Error('operator credential required');op.status='closed';return{result:{operation:op},dirty:true};});}
+ ticket(id){const ticket=this.read().tickets.find(t=>t.id===id);if(!ticket)return undefined;return ticket.accessible?ticket:{id:ticket.id,accessible:false};}
+ observeTicket(id,credential=null){if(!identifier.safeParse(id).success)return error('invalid_ticket_id');return this.transaction(state=>{const op=this.operation(state,credential),ticket=state.tickets.find(t=>t.id===id);if(!ticket||!ticket.accessible)return{result:error(ticket?'access_denied':'ticket_not_found'),dirty:false};const read={id:randomUUID(),source:source(state,ticket),scope:this.scope(op),content_sha256:'',status:'observed',decision:null};read.content_sha256=readHash(read);(state.reads??=[]).push(read);return{result:{ticket,read},dirty:true};});}
+ observeAttachment(id,attachmentId,credential=null){if(!identifier.safeParse(id).success||!identifier.safeParse(attachmentId).success)return error('invalid_attachment_id');return this.transaction(state=>{const op=this.operation(state,credential),ticket=state.tickets.find(t=>t.id===id);if(!ticket||!ticket.accessible)return{result:error('access_denied'),dirty:false};const attachment=ticket.attachments.find(a=>a.id===attachmentId);if(!attachment)return{result:error('attachment_not_found'),dirty:false};const instruction_source=structuredClone({customer:ticket.customer,email:ticket.email,accessible:ticket.accessible,messages:ticket.messages,attachments:ticket.attachments}),read={id:randomUUID(),instance_id:state.instance_id??null,ticket_id:id,instruction_sha256:instructionHash(ticket),instruction_source,attachment:structuredClone(attachment),scope:this.scope(op),content_sha256:''};read.content_sha256=attachmentReadHash(read);(state.attachment_reads??=[]).push(read);return{result:{attachment,read},dirty:true};});}
+ attachmentProofs(state,read){return read.source.ticket.policy.required_attachment_ids.map(id=>(state.attachment_reads??[]).findLast(a=>a.ticket_id===read.source.ticket.id&&a.instance_id===read.source.instance_id&&a.scope.kind===read.scope.kind&&a.scope.operation_id===read.scope.operation_id&&a.instruction_sha256===read.source.ticket.policy.instruction_sha256&&a.attachment.id===id&&same(a.attachment,read.source.ticket.attachments.find(t=>t.id===id)))?.id??null);}
+ submit(id,input,credential=null){if(!identifier.safeParse(id).success)return error('invalid_ticket_id');return this.transaction(state=>{
+  const op=this.operation(state,credential),ticket=state.tickets.find(t=>t.id===id);if(!ticket||!ticket.accessible)return{result:error(ticket?'access_denied':'ticket_not_found'),dirty:false};if(!managed(state))return{result:error('managed_workspace_required'),dirty:false};if(!inputSchema.safeParse(input).success)return{result:error('invalid_submit_arguments'),dirty:false};
+  const read=state.reads?.find(r=>r.id===input.read_id),reason=!read||read.source.ticket.id!==id?'observed_read_required':read.content_sha256!==input.read_sha256?'read_hash_changed':read.status!=='observed'?'read_already_used':op&&read.scope.operation_id!==op.id?'read_not_owned':op&&(!op.allow_writes||!read.scope.allow_writes||!matches(ticket,op.target))?'writes_not_authorized':input.revision!==read.source.ticket.revision||ticket.revision!==input.revision?'stale_revision':!same(read.source,source(state,ticket))?'ticket_changed':null;if(reason)return{result:error(reason),dirty:false};
+  const attempt={address:input.address,reply:input.reply,status:input.status};try{validateAttempt(ticket,attempt);}catch(e){return{result:error(e.message),dirty:false};}const proofs=this.attachmentProofs(state,read);if(proofs.includes(null))return{result:error('relevant_attachment_read_required'),dirty:false};
+  const unchanged=attempt.address===ticket.address&&attempt.reply===ticket.reply&&attempt.status===ticket.status;if(!ticket.failNextSubmit&&!unchanged&&ticket.revision===Number.MAX_SAFE_INTEGER)throw Error('revision_exhausted');
+  const before=structuredClone(ticket),kind=ticket.failNextSubmit?'transient_failure':unchanged?'unchanged':'changed';let recordId=null;
+  if(kind==='transient_failure'){ticket.failNextSubmit=false;read.status='failed';recordId=next('F',state.failures??[]);(state.failures??=[]).push({id:recordId,read_id:read.id,read_sha256:read.content_sha256,ticket_id:id,before,after:structuredClone(ticket),reason:'submit_failed_retryable'});}
+  else if(kind==='changed'){Object.assign(ticket,attempt,{revision:ticket.revision+1});read.status='applied';recordId=next('U',state.updates??[]);(state.updates??=[]).push({id:recordId,read_id:read.id,read_sha256:read.content_sha256,ticket_id:id,before,after:structuredClone(ticket)});}
+  else read.status='unchanged';
+  read.decision={attempt,attachment_read_ids:proofs,actor_kind:op?'operator':'synthetic_human',operation_id:op?.id??null,task_sha256:op?.task_sha256??null,read_sha256:read.content_sha256,source:structuredClone(read.source),after:structuredClone(ticket),kind};state.audit.push({sequence:state.audit.length+1,action:kind==='changed'?'update':kind,ticket_id:id,read_id:read.id,record_id:recordId,before_sha256:hash(canonical(read.source)),after_sha256:hash(canonical(source(state,ticket)))});
+  return{result:kind==='transient_failure'?{error:'submit_failed_retryable',read_id:read.id}:{ticket,read_id:read.id,unchanged},dirty:true};
+ });}
+ correct(id,message,{requiredAddress=null,keepOpen=true,requiredAttachments}={},expectedRevision){
+  const m=z.strictObject({at:utc,author:z.literal('Customer'),text:prose(1,4000)}).parse(message);revision.parse(expectedRevision);return this.transaction(state=>{if(!managed(state))throw Error('managed_workspace_required');const ticket=state.tickets.find(t=>t.id===id);if(!ticket||!ticket.accessible)return{result:error('access_denied'),dirty:false};if(ticket.revision!==expectedRevision)return{result:error('stale_revision'),dirty:false};if(ticket.revision===Number.MAX_SAFE_INTEGER)throw Error('revision_exhausted');if(ticket.messages.length&&new Date(m.at)<=new Date(ticket.messages.at(-1).at))throw Error('correction must follow the current conversation');const before=source(state,ticket);ticket.messages.push(m);ticket.policy=authorPolicy(ticket,{requiredAddress,keepOpen,requiredAttachments});ticket.revision++;const record={id:next('C',state.corrections??[]),source:before,after:structuredClone(ticket),declared_by:'synthetic_customer_source'};(state.corrections??=[]).push(record);state.audit.push({sequence:state.audit.length+1,action:'correction',ticket_id:id,read_id:null,record_id:record.id,before_sha256:hash(canonical(before)),after_sha256:hash(canonical(source(state,ticket)))});return{result:{ticket},dirty:true};});
+ }
 }

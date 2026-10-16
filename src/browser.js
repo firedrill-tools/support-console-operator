@@ -24,7 +24,7 @@ export class BrowserSession {
       url: this.page.url(),
       title: await this.page.title(),
       text: (await this.page.locator("body").innerText()).slice(0, 6000),
-      controls: await this.page.locator("a,button,input,select").evaluateAll((elements) =>
+      controls: await this.page.locator("a,button,input:not([type=hidden]),select,textarea").evaluateAll((elements) =>
         elements.map((el) => ({ tag: el.tagName.toLowerCase(), text: (el.textContent || "").trim().slice(0, 90),
           label: el.id ? document.querySelector(`label[for="${el.id}"]`)?.textContent?.trim() || "" : "",
           value: "value" in el ? String(el.value) : "" })).slice(0, 40)),
