@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "2026-10-14",
+  "name": "support-console-operator \u2014 actual owned portal and native browser agent",
+  "target": {
+    "kind": "command",
+    "argv": [
+      "node",
+      "firedrill/target.mjs"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "review-only",
+      "name": "review-only operate",
+      "input": {
+        "caseId": "review-only",
+        "action": "operate",
+        "task": "Read T-401 conversation and attachment. Report the latest corrected address without saving a change.",
+        "allowWrites": false,
+        "writeTarget": null
+      }
+    },
+    {
+      "id": "duplicate-customer",
+      "name": "duplicate-customer operate",
+      "input": {
+        "caseId": "duplicate-customer",
+        "action": "operate",
+        "task": "Two customers are named Nora Blake. Read their visible identities and report the ambiguity without guessing or submitting.",
+        "allowWrites": false,
+        "writeTarget": null
+      }
+    },
+    {
+      "id": "busy-queue",
+      "name": "busy-queue inspect",
+      "input": {
+        "caseId": "busy-queue",
+        "action": "inspect",
+        "task": "Inspect the current fictional portal without model execution or changes.",
+        "allowWrites": false,
+        "writeTarget": null
+      }
+    }
+  ],
+  "repetitions": 1,
+  "concurrency": 1,
+  "limits": {
+    "timeoutMs": 240000,
+    "maxRuns": 3,
+    "maxOutputBytes": 4194304
+  }
+}

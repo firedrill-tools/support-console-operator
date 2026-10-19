@@ -69,3 +69,7 @@ Initialization/reset require a fresh destination and create a fresh UUID plus pr
 `npm run package:check` qualifies a fresh complete locked source and independent production-only install outside the checkout, actual installed CLI/browser/captures/mobile viewport, private CLI cases, missing-key evidence, all three signals, unchanged manifest and repeated portable source bytes. [PLAN.md](PLAN.md) and [COMPATIBILITY.md](COMPATIBILITY.md) record exact qualification.
 
 Live enabled model/key/budget and human semantic/billing review, a qualified new Firedrill interface with persisted scenarios/runs, actual support/email/authentication and publication/license decisions remain parked. This private repository has no publication license yet. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
+
+## Current Firedrill integration
+
+Released CLI/SDK 2.2.2, current command invocation, remote operator MCP and recovery are documented in [firedrill/README.md](firedrill/README.md). Offline checks preserve the actual portal/native key boundary and existing independent permissions. Authenticated persisted runs and live quality/cost remain separate parked gates.

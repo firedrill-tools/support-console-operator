@@ -7,3 +7,6 @@ artifacts/
 .*.support-lock.sqlite*
 workspaces/
 dist/
+
+node_modules/
+.runs/
