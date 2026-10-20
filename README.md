@@ -4,6 +4,8 @@ A browser-only support operator using actual Vercel AI SDK 7.0.141, OpenAI provi
 
 Simulate this Vercel AI SDK AI agent with [Firedrill](https://firedrill.run/), a simulation platform for AI agents. Start with the [Firedrill setup and simulation guide](firedrill/README.md); your coding agent can operate it while this application's runner stays in your repository or CI.
 
+This example repository is publicly viewable. A project license has not been selected.
+
 ## Run locally
 
 Node 22.13+ and Playwright Chromium are required.
@@ -70,7 +72,7 @@ Initialization/reset require a fresh destination and create a fresh UUID plus pr
 
 `npm run package:check` qualifies a fresh complete locked source and independent production-only install outside the checkout, actual installed CLI/browser/captures/mobile viewport, private CLI cases, missing-key evidence, all three signals, unchanged manifest and repeated portable source bytes. [PLAN.md](PLAN.md) and [COMPATIBILITY.md](COMPATIBILITY.md) record exact qualification.
 
-Live enabled model/key/budget and human semantic/billing review, authenticated Firedrill scenario/run persistence verification, actual support/email/authentication and publication/license decisions remain parked. This private repository has no publication license yet. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
+Live enabled model/key/budget and human semantic/billing review, authenticated Firedrill scenario/run persistence verification, actual support/email/authentication and license decisions remain parked. This public repository has no selected project license. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
 
 ## Current Firedrill integration
 
