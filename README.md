@@ -1,6 +1,8 @@
-# Support console operator
+# Support browser agent with Vercel AI SDK and Playwright
 
 A browser-only support operator using actual Vercel AI SDK 7.0.141, OpenAI provider 4.0.94 and Playwright 1.64.1. A fictional support console includes attachments superseded by later customer corrections, keep-open requests, restricted tickets, duplicate customers and a transient form failure. Every browser observation has a private screenshot; model prose and observed saved effects are reported separately.
+
+Simulate this Vercel AI SDK AI agent with [Firedrill](https://firedrill.run/), a simulation platform for AI agents. Start with the [Firedrill setup and simulation guide](firedrill/README.md); your coding agent can operate it while this application's runner stays in your repository or CI.
 
 ## Run locally
 
@@ -68,7 +70,7 @@ Initialization/reset require a fresh destination and create a fresh UUID plus pr
 
 `npm run package:check` qualifies a fresh complete locked source and independent production-only install outside the checkout, actual installed CLI/browser/captures/mobile viewport, private CLI cases, missing-key evidence, all three signals, unchanged manifest and repeated portable source bytes. [PLAN.md](PLAN.md) and [COMPATIBILITY.md](COMPATIBILITY.md) record exact qualification.
 
-Live enabled model/key/budget and human semantic/billing review, a qualified new Firedrill interface with persisted scenarios/runs, actual support/email/authentication and publication/license decisions remain parked. This private repository has no publication license yet. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
+Live enabled model/key/budget and human semantic/billing review, authenticated Firedrill scenario/run persistence verification, actual support/email/authentication and publication/license decisions remain parked. This private repository has no publication license yet. [Firedrill example catalog](https://github.com/firedrill-tools/firedrill-example-catalog).
 
 ## Current Firedrill integration
 
